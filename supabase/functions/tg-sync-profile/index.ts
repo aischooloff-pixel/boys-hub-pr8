@@ -35,10 +35,30 @@ async function sha256Raw(data: string) {
   return crypto.subtle.digest('SHA-256', enc(data));
 }
 
-async function verifyTelegramInitData(initData: string) {
+type VerifyDebug = {
+  reason: 'ok' | 'missing_hash' | 'hash_mismatch' | 'missing_user' | 'bad_user_json';
+  initDataLength: number;
+  auth_date: string | null;
+  has_query_id: boolean;
+  user_id: number | null;
+  token_prefix: string; // first 10 chars of bot token for debugging
+};
+
+async function verifyTelegramInitData(initData: string): Promise<{ user: any | null; debug: VerifyDebug }> {
   const params = parseInitData(initData);
+  const tokenPrefix = TELEGRAM_BOT_TOKEN ? TELEGRAM_BOT_TOKEN.substring(0, 10) + '...' : 'NOT_SET';
+  
+  const debugBase: Omit<VerifyDebug, 'reason' | 'user_id'> = {
+    initDataLength: initData?.length || 0,
+    auth_date: params.get('auth_date'),
+    has_query_id: !!params.get('query_id'),
+    token_prefix: tokenPrefix,
+  };
+
   const hash = params.get('hash');
-  if (!hash) return null;
+  if (!hash) {
+    return { user: null, debug: { ...debugBase, reason: 'missing_hash', user_id: null } };
+  }
 
   const pairs: string[] = [];
   params.forEach((value, key) => {
@@ -51,11 +71,35 @@ async function verifyTelegramInitData(initData: string) {
   const secretKey = await sha256Raw(TELEGRAM_BOT_TOKEN);
   const checkHash = await hmacSha256Hex(secretKey, dataCheckString);
 
-  if (checkHash !== hash) return null;
+  if (checkHash !== hash) {
+    let userId: number | null = null;
+    try {
+      const u = params.get('user');
+      if (u) userId = JSON.parse(u)?.id ?? null;
+    } catch {
+      // ignore
+    }
+
+    console.log('[tg-sync-profile] hash_mismatch', { 
+      expected: checkHash.substring(0, 16) + '...', 
+      got: hash.substring(0, 16) + '...',
+      dataCheckStringLength: dataCheckString.length,
+    });
+
+    return { user: null, debug: { ...debugBase, reason: 'hash_mismatch', user_id: userId } };
+  }
 
   const userJson = params.get('user');
-  if (!userJson) return null;
-  return JSON.parse(userJson);
+  if (!userJson) {
+    return { user: null, debug: { ...debugBase, reason: 'missing_user', user_id: null } };
+  }
+
+  try {
+    const user = JSON.parse(userJson);
+    return { user, debug: { ...debugBase, reason: 'ok', user_id: user?.id ?? null } };
+  } catch {
+    return { user: null, debug: { ...debugBase, reason: 'bad_user_json', user_id: null } };
+  }
 }
 
 Deno.serve(async (req) => {
@@ -70,12 +114,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const tgUser = await verifyTelegramInitData(initData);
+    const { user: tgUser, debug } = await verifyTelegramInitData(initData);
+    console.log('[tg-sync-profile] verify result:', debug);
+
     if (!tgUser?.id) {
-      return new Response(JSON.stringify({ error: 'Invalid Telegram initData' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid Telegram initData',
+          reason: debug.reason,
+          hint: debug.reason === 'hash_mismatch' 
+            ? 'Токен бота в секретах не совпадает с ботом, через которого открыто мини-приложение. Проверьте TELEGRAM_BOT_TOKEN.'
+            : undefined,
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     // Upsert profile by telegram_id
