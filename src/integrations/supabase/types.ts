@@ -214,9 +214,11 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          blocked_at: string | null
           created_at: string | null
           first_name: string | null
           id: string
+          is_blocked: boolean
           is_premium: boolean | null
           last_name: string | null
           premium_expires_at: string | null
@@ -233,9 +235,11 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          blocked_at?: string | null
           created_at?: string | null
           first_name?: string | null
           id?: string
+          is_blocked?: boolean
           is_premium?: boolean | null
           last_name?: string | null
           premium_expires_at?: string | null
@@ -252,9 +256,11 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          blocked_at?: string | null
           created_at?: string | null
           first_name?: string | null
           id?: string
+          is_blocked?: boolean
           is_premium?: boolean | null
           last_name?: string | null
           premium_expires_at?: string | null
