@@ -350,6 +350,61 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          article_id: string | null
+          created_at: string
+          from_user_id: string | null
+          id: string
+          is_read: boolean
+          message: string
+          type: string
+          user_profile_id: string
+        }
+        Insert: {
+          article_id?: string | null
+          created_at?: string
+          from_user_id?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          type: string
+          user_profile_id: string
+        }
+        Update: {
+          article_id?: string | null
+          created_at?: string
+          from_user_id?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          type?: string
+          user_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_from_user_id_fkey"
+            columns: ["from_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pending_rejections: {
         Row: {
           admin_telegram_id: number

@@ -55,6 +55,20 @@ export default function Profile() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
 
+  // Listen for tab switch events from side menu
+  useEffect(() => {
+    const handleTabSwitch = (e: CustomEvent) => {
+      if (e.detail) {
+        setActiveTab(e.detail);
+      }
+    };
+    
+    window.addEventListener('switch-profile-tab', handleTabSwitch as EventListener);
+    return () => {
+      window.removeEventListener('switch-profile-tab', handleTabSwitch as EventListener);
+    };
+  }, []);
+
   // Load user's articles
   useEffect(() => {
     const loadArticles = async () => {

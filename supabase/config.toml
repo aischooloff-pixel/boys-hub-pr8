@@ -53,3 +53,9 @@ verify_jwt = false
 
 [functions.tg-my-activity]
 verify_jwt = false
+
+[functions.tg-notifications]
+verify_jwt = false
+
+[functions.search-articles]
+verify_jwt = false

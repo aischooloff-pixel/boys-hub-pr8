@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   X,
   Home,
@@ -6,13 +7,15 @@ import {
   User,
   Crown,
   Settings,
-  Bell,
   HelpCircle,
   MessageSquare,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/hooks/use-profile';
+import { SettingsModal } from '@/components/profile/SettingsModal';
+import { SupportModal } from '@/components/profile/SupportModal';
+import { PremiumModal } from '@/components/profile/PremiumModal';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -21,6 +24,10 @@ interface SideMenuProps {
 
 export function SideMenu({ isOpen, onClose }: SideMenuProps) {
   const { profile } = useProfile();
+  const navigate = useNavigate();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isPremiumOpen, setIsPremiumOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -35,97 +42,137 @@ export function SideMenu({ isOpen, onClose }: SideMenuProps) {
 
   const isPremium = !!profile?.is_premium;
 
+  const handleFavoritesClick = () => {
+    onClose();
+    navigate('/profile');
+    // Small delay to ensure navigation completes, then switch tab
+    setTimeout(() => {
+      const event = new CustomEvent('switch-profile-tab', { detail: 'favorites' });
+      window.dispatchEvent(event);
+    }, 100);
+  };
+
+  const handlePremiumClick = () => {
+    onClose();
+    if (isPremium) {
+      // TODO: Navigate to premium info link (to be provided)
+      setIsPremiumOpen(true);
+    } else {
+      setIsPremiumOpen(true);
+    }
+  };
+
+  const handleSettingsClick = () => {
+    onClose();
+    setIsSettingsOpen(true);
+  };
+
+  const handleHelpClick = () => {
+    onClose();
+    setIsSupportOpen(true);
+  };
+
   const menuItems = [
-    { icon: Home, label: 'Главная', path: '/' },
-    { icon: FileText, label: 'Хаб', path: '/hub' },
-    { icon: Bookmark, label: 'Избранное', path: '/profile?tab=favorites' },
-    { icon: User, label: 'Профиль', path: '/profile' },
-    { icon: Crown, label: 'Premium', path: '/profile?premium=true' },
-    { icon: Bell, label: 'Уведомления', path: '/profile?settings=notifications' },
-    { icon: Settings, label: 'Настройки', path: '/profile?settings=true' },
-    { icon: HelpCircle, label: 'Помощь', path: '#' },
-    { icon: MessageSquare, label: 'Telegram канал', path: 'https://t.me/boyshub', external: true },
+    { icon: Home, label: 'Главная', path: '/', onClick: undefined },
+    { icon: FileText, label: 'Хаб', path: '/hub', onClick: undefined },
+    { icon: Bookmark, label: 'Избранное', path: undefined, onClick: handleFavoritesClick },
+    { icon: User, label: 'Профиль', path: '/profile', onClick: undefined },
+    { icon: Crown, label: 'Premium', path: undefined, onClick: handlePremiumClick },
+    { icon: Settings, label: 'Настройки', path: undefined, onClick: handleSettingsClick },
+    { icon: HelpCircle, label: 'Помощь', path: undefined, onClick: handleHelpClick },
+    { icon: MessageSquare, label: 'Telegram канал', path: 'https://t.me/boyshub', external: true, onClick: undefined },
   ];
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
+    <>
+      <div className="fixed inset-0 z-[100]">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-background/80 backdrop-blur-sm animate-fade-in"
+          onClick={onClose}
+        />
 
-      {/* Side panel */}
-      <div className="absolute left-0 top-0 h-full w-72 bg-card shadow-xl animate-slide-right">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border p-4">
-          <div className="flex items-center gap-3">
-            <img
-              src={displayAvatar}
-              alt={displayName}
-              className="h-10 w-10 rounded-full border border-border"
-              loading="lazy"
-            />
-            <div>
-              <p className="font-heading font-semibold">{displayName}</p>
-              <p className="text-xs text-muted-foreground">@{displayUsername}</p>
+        {/* Side panel */}
+        <div className="absolute left-0 top-0 h-full w-72 bg-card shadow-xl animate-slide-right">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-border p-4">
+            <div className="flex items-center gap-3">
+              <img
+                src={displayAvatar}
+                alt={displayName}
+                className="h-10 w-10 rounded-full border border-border"
+                loading="lazy"
+              />
+              <div>
+                <p className="font-heading font-semibold">{displayName}</p>
+                <p className="text-xs text-muted-foreground">@{displayUsername}</p>
+              </div>
             </div>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть меню">
+              <X className="h-5 w-5" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Закрыть меню">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
 
-        {!profile && (
-          <div className="border-b border-border p-4 text-sm text-muted-foreground">
-            Откройте приложение из Telegram, чтобы загрузить ваш профиль.
-          </div>
-        )}
+          {!profile && (
+            <div className="border-b border-border p-4 text-sm text-muted-foreground">
+              Откройте приложение из Telegram, чтобы загрузить ваш профиль.
+            </div>
+          )}
 
-        {/* Menu items */}
-        <nav className="p-4" aria-label="Основная навигация">
-          <ul className="space-y-2">
-            {menuItems.map((item) => (
-              <li key={item.label}>
-                {item.external ? (
-                  <a
-                    href={item.path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 rounded-lg p-3 text-foreground transition-colors hover:bg-secondary"
-                    onClick={onClose}
-                  >
-                    <item.icon className="h-5 w-5 text-muted-foreground" />
-                    <span>{item.label}</span>
-                  </a>
-                ) : (
-                  <Link
-                    to={item.path}
-                    className="flex items-center gap-3 rounded-lg p-3 text-foreground transition-colors hover:bg-secondary"
-                    onClick={onClose}
-                  >
-                    <item.icon className="h-5 w-5 text-muted-foreground" />
-                    <span>{item.label}</span>
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </nav>
+          {/* Menu items */}
+          <nav className="p-4" aria-label="Основная навигация">
+            <ul className="space-y-2">
+              {menuItems.map((item) => (
+                <li key={item.label}>
+                  {item.external ? (
+                    <a
+                      href={item.path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-lg p-3 text-foreground transition-colors hover:bg-secondary"
+                      onClick={onClose}
+                    >
+                      <item.icon className="h-5 w-5 text-muted-foreground" />
+                      <span>{item.label}</span>
+                    </a>
+                  ) : item.onClick ? (
+                    <button
+                      onClick={item.onClick}
+                      className="flex w-full items-center gap-3 rounded-lg p-3 text-foreground transition-colors hover:bg-secondary"
+                    >
+                      <item.icon className="h-5 w-5 text-muted-foreground" />
+                      <span>{item.label}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      to={item.path!}
+                      className="flex items-center gap-3 rounded-lg p-3 text-foreground transition-colors hover:bg-secondary"
+                      onClick={onClose}
+                    >
+                      <item.icon className="h-5 w-5 text-muted-foreground" />
+                      <span>{item.label}</span>
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-        {/* Premium CTA */}
-        {!isPremium && (
-          <div className="absolute bottom-4 left-4 right-4">
-            <Link to="/profile?premium=true" onClick={onClose}>
-              <Button className="w-full gap-2">
+          {/* Premium CTA - only for non-premium users */}
+          {!isPremium && (
+            <div className="absolute bottom-4 left-4 right-4">
+              <Button className="w-full gap-2" onClick={handlePremiumClick}>
                 <Crown className="h-4 w-4" />
                 Перейти на Premium
               </Button>
-            </Link>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
+      <PremiumModal isOpen={isPremiumOpen} onClose={() => setIsPremiumOpen(false)} />
+    </>
   );
 }
-
